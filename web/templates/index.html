@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Voice Assistant</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:wght@600;700&family=Manrope:wght@400;500;600&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg: #e9f0f7; --panel: #ffffff; --ink: #0f2540; --muted: #5b6f86; --line: #d5e0ec;
+    --cobalt: #2f5bff; --teal: #12a594; --coral: #e5484d; --tint: #dbe6f5;
+    --display: "Bricolage Grotesque", "Segoe UI", system-ui, sans-serif;
+    --body: "Manrope", "Segoe UI", system-ui, sans-serif;
+  }
+  * { box-sizing: border-box; }
+  body { margin: 0; background: var(--bg); color: var(--ink); font-family: var(--body); line-height: 1.5; }
+  .app { max-width: 1040px; margin: 0 auto; padding: 28px 20px 40px; }
+  header { display: flex; align-items: center; gap: 14px; margin-bottom: 24px; }
+  .mark { width: 44px; height: 44px; border-radius: 12px; background: var(--ink); display: grid; place-items: center; }
+  .mark svg { width: 24px; height: 24px; }
+  h1 { font-family: var(--display); font-size: 26px; margin: 0; letter-spacing: -0.01em; }
+  header p { margin: 0; color: var(--muted); font-size: 14px; }
+
+  main { display: grid; grid-template-columns: 1fr 1.1fr; gap: 20px; align-items: stretch; }
+  .stage { background: var(--tint); border-radius: 24px; padding: 40px 24px 28px; display: flex; flex-direction: column; align-items: center; text-align: center; }
+  .chat { background: var(--panel); border: 1px solid var(--line); border-radius: 24px; padding: 22px; display: flex; flex-direction: column; min-height: 460px; }
+  .chat h2 { font-family: var(--display); font-size: 18px; margin: 0 0 12px; }
+
+  /* Orb */
+  .orb { position: relative; width: 176px; height: 176px; border: 0; background: none; padding: 0; cursor: pointer; border-radius: 50%; }
+  .orb:focus-visible { outline: 3px solid var(--cobalt); outline-offset: 6px; }
+  .orb:disabled { cursor: not-allowed; opacity: .5; }
+  .core { position: absolute; inset: 20px; border-radius: 50%; background: var(--ink); display: grid; place-items: center; transition: background .25s; box-shadow: 0 10px 24px rgba(15,37,64,.25); }
+  .core svg { width: 46px; height: 46px; }
+  .ring { position: absolute; inset: 20px; border-radius: 50%; border: 2px solid var(--cobalt); opacity: 0; }
+  .bars { display: none; gap: 6px; align-items: center; height: 56px; }
+  .bars i { display: block; width: 7px; height: 14px; border-radius: 4px; background: #fff; }
+
+  body[data-state="listening"] .core { background: var(--cobalt); }
+  body[data-state="listening"] .ring { animation: ripple 1.8s ease-out infinite; }
+  body[data-state="listening"] .ring.r2 { animation-delay: .9s; }
+  body[data-state="speaking"] .core { background: var(--teal); }
+  body[data-state="speaking"] .core svg { display: none; }
+  body[data-state="speaking"] .bars { display: flex; }
+  body[data-state="speaking"] .bars i { animation: talk .9s ease-in-out infinite; }
+  .bars i:nth-child(2) { animation-delay: .12s !important; }
+  .bars i:nth-child(3) { animation-delay: .24s !important; }
+  .bars i:nth-child(4) { animation-delay: .36s !important; }
+  .bars i:nth-child(5) { animation-delay: .48s !important; }
+  @keyframes ripple { from { transform: scale(1); opacity: .7; } to { transform: scale(1.5); opacity: 0; } }
+  @keyframes talk { 0%, 100% { height: 12px; } 50% { height: 52px; } }
+
+  #status { font-family: var(--display); font-size: 28px; font-weight: 700; margin: 22px 0 4px; }
+  #hint { color: var(--muted); font-size: 15px; margin: 0; min-height: 24px; max-width: 30ch; }
+
+  .try { margin-top: 28px; width: 100%; }
+  .try p { margin: 0 0 10px; font-size: 14px; color: var(--muted); }
+  .chips { display: flex; flex-wrap: wrap; gap: 8px; justify-content: center; }
+  .chip { font: inherit; font-size: 14px; font-weight: 500; color: var(--ink); background: var(--panel); border: 1px solid var(--line); border-radius: 999px; padding: 8px 14px; cursor: pointer; transition: border-color .15s, background .15s; }
+  .chip:hover { border-color: var(--cobalt); background: #f5f8ff; }
+  .chip:focus-visible { outline: 3px solid var(--cobalt); outline-offset: 2px; }
+
+  /* Conversation */
+  #log { flex: 1; overflow-y: auto; display: flex; flex-direction: column; gap: 10px; max-height: 520px; padding-right: 4px; }
+  .empty { margin: auto; text-align: center; color: var(--muted); max-width: 26ch; }
+  .msg { max-width: 85%; padding: 10px 14px; border-radius: 16px; font-size: 15px; }
+  .msg.you { align-self: flex-end; background: var(--ink); color: #fff; border-bottom-right-radius: 4px; }
+  .msg.bot { align-self: flex-start; background: #e6f6f3; border: 1px solid #c4e8e2; border-bottom-left-radius: 4px; }
+  .msg small { display: block; font-size: 12px; opacity: .7; margin-bottom: 2px; }
+  .msg a { color: var(--cobalt); font-weight: 600; }
+
+  @media (max-width: 800px) { main { grid-template-columns: 1fr; } .chat { min-height: 320px; } }
+  @media (prefers-reduced-motion: reduce) { .ring, .bars i { animation: none !important; } }
+</style>
+</head>
+<body data-state="idle">
+<div class="app">
+  <header>
+    <div class="mark" aria-hidden="true">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+    </div>
+    <div>
+      <h1>Voice Assistant</h1>
+      <p>Talk to it. It answers out loud.</p>
+    </div>
+  </header>
+
+  <main>
+    <section class="stage" aria-label="Controls">
+      <button id="orb" class="orb" aria-label="Start voice assistant">
+        <span class="ring r1"></span><span class="ring r2"></span>
+        <span class="core">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="1.8" stroke-linecap="round"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5 11a7 7 0 0 0 14 0M12 18v3"/></svg>
+          <span class="bars"><i></i><i></i><i></i><i></i><i></i></span>
+        </span>
+      </button>
+      <div id="status" aria-live="polite">Tap to start</div>
+      <p id="hint">Allow the microphone when your browser asks.</p>
+
+      <div class="try">
+        <p>Try saying</p>
+        <div class="chips">
+          <button class="chip" data-text="hello">Hello</button>
+          <button class="chip" data-text="what is the time">What is the time?</button>
+          <button class="chip" data-text="what is the date">What is the date?</button>
+          <button class="chip" data-text="search python tutorials">Search python tutorials</button>
+        </div>
+      </div>
+    </section>
+
+    <section class="chat" aria-label="Conversation">
+      <h2>Conversation</h2>
+      <div id="log" aria-live="polite">
+        <div class="empty" id="empty">Nothing yet. Tap the microphone and say hello, or pick a phrase on the left.</div>
+      </div>
+    </section>
+  </main>
+</div>
+
+<script>
+const SR = window.SpeechRecognition || window.webkitSpeechRecognition;
+const orb = document.getElementById("orb");
+const statusEl = document.getElementById("status");
+const hintEl = document.getElementById("hint");
+const logEl = document.getElementById("log");
+let rec = null, active = false;
+
+function setState(state, label, hint) {
+  document.body.dataset.state = state;
+  statusEl.textContent = label;
+  hintEl.textContent = hint || "";
+}
+
+function log(who, text, url) {
+  const empty = document.getElementById("empty");
+  if (empty) empty.remove();
+  const d = document.createElement("div");
+  d.className = "msg " + (who === "You" ? "you" : "bot");
+  const s = document.createElement("small");
+  s.textContent = who;
+  d.appendChild(s);
+  d.appendChild(document.createTextNode(text));
+  if (url) {
+    d.appendChild(document.createElement("br"));
+    const a = document.createElement("a");
+    a.href = url; a.target = "_blank"; a.rel = "noopener"; a.textContent = "Open results";
+    d.appendChild(a);
+  }
+  logEl.appendChild(d);
+  logEl.scrollTop = logEl.scrollHeight;
+}
+
+function say(text, after, url) {
+  log("Assistant", text, url);
+  setState("speaking", "Speaking", "");
+  const u = new SpeechSynthesisUtterance(text);
+  u.onend = () => after && after();
+  speechSynthesis.cancel();
+  speechSynthesis.speak(u);
+}
+
+function listen() {
+  if (!active) return;
+  setState("listening", "Listening", "Speak now.");
+  try { rec.start(); } catch (e) {}
+}
+
+function stopAll(hint) {
+  active = false;
+  orb.setAttribute("aria-label", "Start voice assistant");
+  setState("idle", "Tap to start", hint || "Say hello, or pick a phrase below.");
+}
+
+async function handle(text) {
+  if (active && rec) { try { rec.abort(); } catch (e) {} }
+  log("You", text);
+  const res = await fetch("/command", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ text })
+  });
+  const data = await res.json();
+  if (data.url) window.open(data.url, "_blank");
+  say(data.reply, () => data.action === "stop" ? stopAll() : (active ? listen() : stopAll()), data.url);
+}
+
+document.querySelectorAll(".chip").forEach(c => c.onclick = () => handle(c.dataset.text));
+
+if (!SR) {
+  orb.disabled = true;
+  setState("idle", "Mic not supported", "Open this page in Chrome or Edge. The phrases below still work.");
+} else {
+  rec = new SR();
+  rec.lang = "en-US";
+  rec.onresult = e => handle(e.results[0][0].transcript);
+  rec.onerror = e => {
+    if (e.error === "aborted") return;
+    if (e.error === "not-allowed") { stopAll("Allow microphone access in the address bar, then tap again."); return; }
+    if (active) say("Sorry, I did not catch that. Could you please repeat?", listen);
+  };
+  orb.onclick = () => {
+    if (active) { try { rec.abort(); } catch (e) {} speechSynthesis.cancel(); stopAll(); return; }
+    active = true;
+    orb.setAttribute("aria-label", "Stop voice assistant");
+    say("Voice assistant started. You can say hello, ask the time or date, or search for something.", listen);
+  };
+}
+</script>
+</body>
+</html>
