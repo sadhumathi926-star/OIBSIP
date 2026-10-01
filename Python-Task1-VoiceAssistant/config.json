@@ -1,0 +1,7 @@
+{
+  "openweathermap_api_key": "",
+  "custom_commands": {
+    "who created you": "I was built by Sadhana as part of the Oasis Infobyte Python internship.",
+    "thank you": "You're welcome!"
+  }
+}
